@@ -1,0 +1,24 @@
+# 密钥与本地配置
+.env
+.env.*
+!.env.example
+
+# Python缓存与虚拟环境
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# 数据库、用户记录与备份
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+*.sqlite3-*
+*.bak
+
+# 日志与IDE配置
+*.log
+.idea/
+.vscode/

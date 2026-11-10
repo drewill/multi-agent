@@ -38,7 +38,7 @@ button,a,input,textarea,select{ -webkit-tap-highlight-color:transparent}button{t
 .el-button{height:auto;min-height:38px;padding:10px 18px;border-radius:1px;border:1px solid #c5cebc;font-weight:600;background:#f2f2e8;color:#45543e;box-shadow:inset 0 2px #fff8,0 2px 0 #bac2ad;font-size:13px}
 .el-button+.el-button{margin-left:0}.el-button:hover{color:#355324;border-color:#84a45c;background:#eaf0df;transform:translateY(-1px)}.el-button:active{transform:translateY(1px);box-shadow:none}
 .el-button--primary{color:#fff!important;background:#638845!important;border:1px solid #799e57!important;box-shadow:inset 0 2px #a2bf6a66,0 3px 0 #304d27!important}.el-button--primary:hover{background:#72984e!important}.el-button--success{background:#e3ecd7;border-color:#8da66d;color:#405d30}.el-button--danger.is-text{color:#a0654f!important}.el-button.is-text{border-color:transparent;box-shadow:none;background:transparent}.el-button.is-disabled{transform:none!important;opacity:.55}.el-button--large{padding:15px 26px}
-.content{max-width:1220px;padding:44px 28px 72px}.page-heading h1,.page-heading>.el-button,.content>h1,.content>.el-button.is-text{color:#edf3e3}.page-heading .muted{color:#a5b59c}.page-heading .eyebrow{color:#bdce8e}.page-heading h1{font-size:29px}.eyebrow{font-family:monospace;letter-spacing:2px;color:#769054;font-size:11px;font-weight:700}.muted{color:var(--muted)}h1,h2,h3,h4{font-weight:700}h2{font-size:19px}h3{font-size:17px}.goal{font-size:17px}
+.content{max-width:1220px;padding:44px 28px 72px}.page-heading h1,.content>h1,.content>.el-button.is-text{color:#edf3e3}.page-heading .muted{color:#a5b59c}.page-heading .eyebrow{color:#bdce8e}.page-heading h1{font-size:29px}.eyebrow{font-family:monospace;letter-spacing:2px;color:#769054;font-size:11px;font-weight:700}.muted{color:var(--muted)}h1,h2,h3,h4{font-weight:700}h2{font-size:19px}h3{font-size:17px}.goal{font-size:17px}
 .home{max-width:1220px;padding-top:44px}.mc-home-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;font:11px monospace;letter-spacing:2px;color:#9db391}.mc-live{display:flex;align-items:center;gap:8px}.mc-live:before{content:"";width:6px;height:6px;background:#bdcf78;box-shadow:0 0 10px #bddb6b55}.mc-home-label{color:#a9bc9c}
 .mc-hero{position:relative;overflow:hidden;min-height:345px;display:grid;grid-template-columns:1.05fr 1fr;border:1px solid #536c45;background:#243b2b;box-shadow:0 6px 0 #101e18}
 .mc-hero-copy{padding:48px 0 44px 40px;position:relative;z-index:1}.mc-hero .eyebrow{color:#bdd68d;letter-spacing:3px;margin-bottom:22px}.mc-hero h1{font-size:40px;line-height:1.45;letter-spacing:1px;color:#f6f4e7;margin:0 0 18px;text-shadow:0 3px #15291b}.mc-hero h1 span{color:#bfdc83}.mc-hero .muted{color:#b9c7ac;font-size:14px;line-height:1.9;max-width:440px}.mc-hero-pills{display:flex;gap:10px;flex-wrap:wrap;margin-top:26px}.mc-hero-pills span{border:1px solid #71865c66;padding:6px 10px;color:#b7c9a4;font-size:10px;letter-spacing:1px;font-family:monospace;background:#1c302566}.mc-scene{width:100%;height:100%;min-height:345px;align-self:stretch;display:block;image-rendering:pixelated}.mc-scene-wrap{position:relative}.mc-scene-wrap:before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,#243b2b,transparent 35%);z-index:1}.mc-scene-caption{position:absolute;bottom:23px;right:24px;font:10px monospace;letter-spacing:2px;color:#e0e8b9;z-index:2}
@@ -75,19 +75,95 @@ button:not(:disabled):active,.el-button:not(.is-disabled):active{transform:trans
 .mc-action-feedback:after{content:"";position:absolute;left:0;bottom:0;height:2px;width:25%;background:#c4df89;animation:mc-action-progress 1.5s ease-in-out infinite alternate}
 @keyframes mc-action-progress{to{left:75%}}@keyframes mc-cube-pulse{50%{opacity:.35;transform:translateY(-3px)}}
 @media(prefers-reduced-motion:reduce){.mc-click-burst{display:none}.mc-loading-cube,.mc-action-feedback:after{animation:none!important}}
+/* 【新增：流式聊天】逐字输出光标和轻量状态行，沿用MC配色。 */
+.mc-chat-status{display:flex;align-items:center;gap:10px;padding:6px 6px 20px;color:#a9bf94;font-size:12px;line-height:1.8}
+.mc-chat-status .mc-loading-cube{width:8px;height:8px}
+.mc-streaming:after{content:"";display:inline-block;width:7px;height:15px;background:#789a4e;margin-left:5px;vertical-align:-2px;animation:mc-stream-caret .9s steps(2,end) infinite}
+@keyframes mc-stream-caret{50%{opacity:0}}
+@media(prefers-reduced-motion:reduce){.mc-streaming:after{animation:none}}
+/* 【修改：流式滚动】关闭浏览器滚动锚点，避免与受控跟随争抢位置。 */
+.messages{overflow-anchor:none;scroll-behavior:auto}
+.mc-latest-row{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;padding:8px 0 12px;flex-shrink:0}
+.mc-latest-row span{font-size:11px;color:#a8bc97}
+
+/* 【修改：聊天布局】充分使用桌面宽度；左右面板独立滚动，手机改上下排列。 */
+.chat-page.mc-chat-workspace{max-width:none;width:100%;height:calc(100dvh - 88px);min-height:480px;margin:0;padding:28px clamp(20px,3vw,54px);display:grid;grid-template-columns:minmax(0,1.25fr) minmax(350px,1fr);gap:28px;overflow:hidden}
+.mc-conversation-column{min-width:0;min-height:0;display:flex;flex-direction:column}
+.mc-conversation-column .chat-heading{padding:0 0 18px;border-bottom:1px solid #536d414d;margin-bottom:12px}
+.mc-conversation-column .chat-heading h2{margin-bottom:10px;font-size:23px}
+.mc-conversation-column .messages{padding:14px 10px 10px 0;overscroll-behavior:contain}
+.mc-conversation-column .bubble{max-width:94%;font-size:14px}
+.mc-conversation-column .message.user .bubble{max-width:88%}
+.mc-conversation-column .composer{padding-top:14px}
+.mc-plan-column{min-width:0;min-height:0;background:#f4f3e9;border:1px solid #cbd4bd;border-top:4px solid #94b16a;box-shadow:0 4px #0b1c1555;display:flex;flex-direction:column;overflow:hidden}
+.mc-plan-preview-header{padding:22px 24px 18px;display:flex;gap:16px;justify-content:space-between;align-items:center;border-bottom:1px solid #d6dec9;flex-shrink:0;background:#e9eddf}
+.mc-plan-preview-header h2{font-size:18px}.mc-plan-preview-header .eyebrow{font-size:10px;margin-bottom:7px}
+.mc-plan-preview-body{flex:1;min-height:0;overflow:auto;padding:23px 24px;overscroll-behavior:contain;scrollbar-color:#9eae87 #e8ecdf}
+.mc-plan-goal{font-size:17px;line-height:1.8;margin:0;overflow-wrap:anywhere}
+.mc-preview-note{padding:12px 14px;background:#e6ecd9;border-left:3px solid #9bb575;font-size:12px;line-height:1.8;color:#6a7c57;margin:16px 0 22px}
+.mc-preview-day{border-top:1px solid #d5dec9;padding:18px 0 2px}.mc-preview-day-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}.mc-preview-day-heading b{font-size:13px;color:#526f3c}.mc-preview-day-heading span{font:11px monospace;color:#8a9879}
+.mc-preview-day ol{margin:0;padding-left:20px}.mc-preview-day li{padding:3px 0 10px 4px;color:#7e8f6c;overflow-wrap:anywhere}.mc-preview-day li strong{font-size:13px;line-height:1.8;color:#354b2d;font-weight:600}.mc-preview-day li p{font-size:12px;line-height:1.85;color:#7c8b6e;margin:5px 0}
+.mc-plan-preview-footer{padding:18px 24px;border-top:1px solid #d7dfcb;flex-shrink:0;background:#ebefdf;display:flex;flex-direction:column;gap:10px}.mc-plan-preview-footer>span{font-size:11px;line-height:1.6;color:#869574;text-align:center}.mc-plan-preview-footer>.el-button{width:100%}
+.mc-plan-placeholder{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:40px 35px;color:#7f8f70}.mc-plan-placeholder .mc-brand-block{margin-bottom:27px;opacity:.7}.mc-plan-placeholder h3{font-size:16px;color:#627b4e}.mc-plan-placeholder p{font-size:13px;line-height:1.9;max-width:300px}
+@media(min-width:1800px){.chat-page.mc-chat-workspace{padding-left:5vw;padding-right:5vw;grid-template-columns:minmax(0,1.3fr) minmax(440px,1fr)}}
+@media(max-width:1000px){.chat-page.mc-chat-workspace{padding:22px 20px;gap:20px;grid-template-columns:minmax(0,1fr) minmax(300px,.9fr)}.mc-plan-preview-header,.mc-plan-preview-body,.mc-plan-preview-footer{padding-left:18px;padding-right:18px}}
+@media(max-width:760px){.chat-page.mc-chat-workspace{height:auto;min-height:0;display:flex;flex-direction:column;overflow:visible;padding:22px 16px;gap:24px}.mc-conversation-column{height:68dvh;min-height:440px}.mc-plan-column{max-height:65dvh;min-height:260px}.mc-plan-placeholder{padding:32px 24px}.mc-conversation-column .chat-heading h2{font-size:20px}.mc-conversation-column .bubble{max-width:96%}.mc-plan-preview-header{padding-top:18px;padding-bottom:15px}}
+/* 【新增：计划更新反馈】面板短暂高亮，任务标记保留到下一次结果。 */
+.mc-plan-updated{animation:mc-plan-confirm 2.2s ease-out}
+@keyframes mc-plan-confirm{0%,25%{outline:3px solid #c4df85;box-shadow:0 0 26px #c2dc7555}100%{outline:3px solid transparent}}
+.mc-plan-update-notice{padding:13px 22px;background:#e1eccb;border-bottom:1px solid #b9cc95;flex-shrink:0;color:#46682e;font-size:12px}
+.mc-plan-update-notice>div{display:flex;justify-content:space-between;align-items:center;gap:12px}.mc-plan-update-notice time{font:10px monospace;color:#819665}.mc-plan-update-notice p{margin:7px 0 0;line-height:1.75}.mc-plan-update-notice .el-button{padding:6px 0;min-height:26px}.mc-plan-update-notice.is-unchanged{background:#eceee5;border-color:#d5ddc8;color:#7b866c}
+.mc-preview-day li.mc-task-changed{background:#e8efd8;outline:1px solid #bdce9e;border-left:3px solid #91af5c;padding:10px 10px 8px;margin:8px 0 13px}
+.mc-task-change-tag{display:inline-block;margin-right:7px;padding:1px 5px;font-size:10px;color:#5b793a;background:#d2e2b6;border:1px solid #b7cc92;vertical-align:1px}
+@media(prefers-reduced-motion:reduce){.mc-plan-updated{animation:none;outline:2px solid #afc97c}}
+/* 【修复：按钮对比度】浅色按钮使用深色文字；不让标题白色规则覆盖按钮。 */
+.page-heading > .el-button:not(.el-button--primary):not(.is-text){color:#45543e;background:#f2f2e8;border-color:#c5cebc}
+.page-heading > .el-button:not(.el-button--primary):not(.is-text):hover{color:#355324;background:#eaf0df;border-color:#84a45c}
+.page-heading .el-button.is-text{color:#bacbac}
+.page-heading .el-button.is-text:hover{color:#edf4e3;background:#ffffff0d}
+
+/* 【新增：MC动态效果】慢速环境动画与轻量入场，避免干扰文字阅读。 */
+.mc-ambient{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:0;contain:strict}
+.mc-ambient i{position:absolute;width:5px;height:5px;background:#bdd784;opacity:0;animation:mc-firefly 15s ease-in-out infinite}
+.mc-ambient i:nth-child(1){left:5%;top:30%;animation-delay:-2s}.mc-ambient i:nth-child(2){left:93%;top:63%;animation-delay:-8s;width:3px;height:3px}.mc-ambient i:nth-child(3){left:46%;top:92%;animation-delay:-5s}.mc-ambient i:nth-child(4){left:81%;top:23%;animation-delay:-12s;width:3px;height:3px}.mc-ambient i:nth-child(5){left:16%;top:80%;animation-delay:-10s;width:3px;height:3px}
+@keyframes mc-firefly{0%,100%{opacity:0;transform:translate(0,14px)}30%{opacity:.2}65%{opacity:.35;transform:translate(12px,-22px)}85%{opacity:.12;transform:translate(20px,-40px)}}
+.shell>main{position:relative;z-index:1;animation:mc-page-arrive .38s ease-out both}
+@keyframes mc-page-arrive{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}
+.home-cards .entry{animation:mc-card-arrive .55s ease-out both}.home-cards .entry:nth-child(2){animation-delay:.09s}
+@keyframes mc-card-arrive{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.home-cards .entry{transition:background .2s,border-color .2s,box-shadow .2s}.entry:hover .entry-icon{background:#cee1ad;box-shadow:inset 3px 3px #fff6,inset -3px -3px #5d773433,3px 3px #a0b37e55;transform:translateY(-3px)}
+.entry-icon{transition:transform .2s,background .2s,box-shadow .2s}.entry .entry-link{transition:letter-spacing .2s}.entry:hover .entry-link{letter-spacing:1px}
+.plan-item{transition:border-color .2s,box-shadow .2s,transform .2s}.plan-item:hover{transform:translateY(-3px);box-shadow:0 7px #0c1d1655,0 0 0 1px #a9c47855}
+.mc-scene rect[fill="#7f967163"]{animation:mc-cloud-drift 14s ease-in-out infinite alternate}
+@keyframes mc-cloud-drift{from{transform:translateX(-7px)}to{transform:translateX(10px)}}
+.mc-scene rect[fill="#9fa18a55"],.mc-scene rect[fill="#9fa18a33"]{animation:mc-cabin-smoke 4.5s steps(5,end) infinite}
+.mc-scene rect[fill="#9fa18a33"]{animation-delay:-2s}
+@keyframes mc-cabin-smoke{0%{opacity:0;transform:translate(0,7px)}30%{opacity:.8}100%{opacity:0;transform:translate(4px,-9px)}}
+.mc-scene rect[fill="#f0db93"]{animation:mc-lantern-light 3s ease-in-out infinite alternate}
+@keyframes mc-lantern-light{from{opacity:.65}to{opacity:1}}
+.mc-hero-copy .eyebrow:before{content:"";display:inline-block;vertical-align:1px;width:6px;height:6px;background:#bdd68d;margin-right:9px;animation:mc-lantern-light 2s ease-in-out infinite alternate}
+.mc-motion-toggle{font:11px inherit;color:#a9bc98!important;white-space:nowrap;border:1px solid #6d87534d;background:#ffffff04;border-radius:1px;padding:8px 10px;cursor:pointer;box-shadow:none;min-height:34px}.mc-motion-toggle:hover{color:#d8e8c7!important;background:#ffffff0d;border-color:#90a970}
+.mc-motion-toggle:before{content:"";display:inline-block;width:5px;height:5px;background:#b5cd79;margin-right:7px;vertical-align:2px}.mc-motion-toggle[aria-pressed="false"]:before{background:#71806b}
+/* 右侧任务更新的高亮仍只在真实收到变更时触发；环境动画不模拟处理进度。 */
+html[data-motion="off"] *,html[data-motion="off"] *:before,html[data-motion="off"] *:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+html[data-motion="off"] .mc-ambient{display:none}
+@media(prefers-reduced-motion:reduce){.mc-ambient{display:none}.shell>main,.home-cards .entry,.mc-scene rect,.mc-hero-copy .eyebrow:before{animation:none!important}.plan-item:hover,.entry:hover .entry-icon{transform:none}}
+@media(max-width:640px){.mc-motion-toggle{padding:7px;font-size:10px}.header-actions{gap:3px}.header-actions .el-button{padding:8px 9px}}
 </style>
 </head>
 <body>
 <div id="app" class="shell" v-cloak>
+<!-- 【新增：MC动态效果】装饰层不接收点击，也不包含业务内容。 -->
+<div class="mc-ambient" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
 <header class="header">
 <!-- 【修改：MC主题】方块标志与导航，仅调整展示。 -->
 <button class="brand" @click="goHome"><span class="mc-brand-block" aria-hidden="true"></span><span>面试备战助手<em>你的 AI 面试准备工作台</em></span></button>
-<div class="header-actions"><el-button text :class="{'is-active': view === 'home'}" @click="goHome">首页</el-button><el-button text :class="{'is-active': view === 'plans'}" @click="showPlans">我的计划</el-button><el-button type="primary" :loading="creating" :disabled="sending || reviewing" @click="createPlan">新建计划</el-button></div>
+<div class="header-actions"><!-- 【新增：MC动态效果】本地偏好开关，不调用后端。 --><button id="mc-motion-toggle" class="mc-motion-toggle" type="button" aria-pressed="true" title="开启或关闭界面动态效果">动态：开</button><el-button text :class="{'is-active': view === 'home'}" @click="goHome">首页</el-button><el-button text :class="{'is-active': view === 'plans'}" @click="showPlans">我的计划</el-button><el-button type="primary" :loading="creating" :disabled="sending || reviewing" @click="createPlan">新建计划</el-button></div>
 </header>
 <!-- 【新增：点击反馈】复用现有请求状态，处理中不误报成功。 -->
 <div v-if="creating || loadingPlans || loadingDetail || sending || confirming || reviewing || interviewBusy || deletingPlanId !== null || savingTasks.length" class="mc-action-feedback" role="status" aria-live="polite" aria-atomic="true">
 <span class="mc-loading-cube" aria-hidden="true"></span>
-<div>{{ creating ? '正在生成准备计划…' : reviewing ? '正在分析执行情况，生成复盘…' : interviewBusy ? '正在处理面试请求…' : sending ? '正在生成回复…' : confirming ? '正在确认计划…' : deletingPlanId !== null ? '正在删除计划…' : savingTasks.length ? '正在保存任务进度…' : loadingDetail ? '正在打开计划…' : '正在加载计划列表…' }}<small>{{ creating || reviewing || sending || interviewBusy ? 'AI 处理需要一些时间，请勿重复提交。' : '请稍候，完成后页面会自动更新。' }}</small></div>
+<div>{{ creating ? '正在生成准备计划…' : reviewing ? '正在分析执行情况，生成复盘…' : interviewBusy ? '正在处理面试请求…' : sending ? (chatStatus || '正在处理请求…') : confirming ? '正在确认计划…' : deletingPlanId !== null ? '正在删除计划…' : savingTasks.length ? '正在保存任务进度…' : loadingDetail ? '正在打开计划…' : '正在加载计划列表…' }}<small>{{ creating || reviewing || sending || interviewBusy ? 'AI 处理需要一些时间，请勿重复提交。' : '请稍候，完成后页面会自动更新。' }}</small></div>
 </div>
 
 
@@ -124,7 +200,7 @@ button:not(:disabled):active,.el-button:not(.is-disabled):active{transform:trans
 <div class="field full"><label>重点准备内容 <span class="muted small">可多选</span></label><div class="focus-options"><label v-for="item in focusOptions" :key="item" class="focus-option"><input type="checkbox" :value="item" v-model="planForm.focus_areas">{{ item }}</label></div></div>
 </div></section>
 <section class="panel"><div class="form-section-title"><span class="step-number">2</span><h2>学习天数与可选时长</h2></div><div class="form-grid"><div class="field"><label for="start-date">开始日期 <span class="required">*</span></label><input id="start-date" type="date" v-model="planForm.start_date" @change="syncFormDays"></div><div class="field"><label for="end-date">结束日期 <span class="required">*</span></label><input id="end-date" type="date" v-model="planForm.end_date" :min="planForm.start_date" @change="syncFormDays"><span class="field-help">只规划一天时，开始和结束选同一天。表单最多填写 14 天。</span></div></div>
-<div class="field"><label>学习天数</label><input type="number" min="1" max="14" v-model.number="learningDays" @change="applyLearningDays"><span class="field-help">默认从所选开始日期起，自动计算结束日期。</span></div><div class="uniform"><b>每日可投入时长（选填）</b><div class="uniform-row" style="margin-top:14px"><div class="field"><label for="uniform-budget">每天最多投入 / 分钟</label><input id="uniform-budget" type="number" min="1" max="1440" step="1" placeholder="留空表示不限制" v-model.number="uniformBudget"></div><el-button native-type="button" @click="applyUniformBudget">应用到所有日期</el-button></div><div class="field-help" style="margin-top:10px">不需要填写几点开始。系统按天安排任务；留空时按天数与学习顺序安排；填写后模型参考时长控制任务量。</div></div>
+<div class="field"><label>学习天数</label><input type="number" min="1" max="14" v-model.number="learningDays" @change="applyLearningDays"><span class="field-help">默认从所选开始日期起，自动计算结束日期。</span></div><!-- 【修改：时长表单】移除统一设置区域，仅保留下方逐日时长输入。 -->
 <div v-if="dateError" class="form-errors" role="alert">{{ dateError }}</div>
 <div v-for="day in planForm.days" :key="day.plan_date" class="day-editor"><div class="day-heading"><b>{{ day.plan_date }} · {{ weekday(day.plan_date) }}</b><label class="day-budget">最多投入 <input type="number" min="1" max="1440" step="1" placeholder="不限" v-model.number="day.available_minutes" :aria-label="day.plan_date + ' 时间预算'"> 分钟</label></div></div>
 <p class="muted small">{{ planForm.days.length === 1 ? '当天任务按学习顺序列出，由你自行安排执行时间。' : '模型按学习顺序和难度将任务合理分配到每天。' }}</p>
@@ -192,11 +268,34 @@ button:not(:disabled):active,.el-button:not(.is-disabled):active{transform:trans
 </template>
 </main>
 
-<main v-else-if="view === 'chat'" class="chat-page">
-<div class="chat-heading"><h2>{{ chatTitle }}</h2><div class="muted small">说说你的准备目标、日期和可用时间，计划生成后由你确认。</div></div>
-<div class="messages" ref="messageScrollRef" aria-live="polite"><div v-if="!messages.length" class="panel"><h3>先介绍一下你的目标吧</h3><p class="muted">例如：三天后面试 Agent 实习，我有一个 RAG 项目，每晚能准备两小时，希望重点练习项目介绍和技术追问。</p></div><template v-for="message in messages" :key="message.id"><div :class="['message', message.role]"><div class="bubble">{{ message.content }}</div></div></template><div v-if="sending" class="message"><div class="bubble muted" role="status">正在处理你的请求…</div></div><div v-if="chatPlan" class="chat-plan"><div class="actions"><b>{{ chatPlan.status === 'draft' ? '计划草稿已生成' : '当前计划' }}</b><el-tag :type="tagType(chatPlan.status)">{{ statusText(chatPlan.status) }}</el-tag></div><p>{{ chatPlan.goal }}</p><p class="muted small">{{ planDateLabel(chatPlan) }} · {{ chatPlan.tasks.length }} 项任务</p><el-button type="primary" @click="openPlan(chatPlan)">查看完整计划表</el-button></div></div>
-<div class="composer"><el-input v-model="inputText" type="textarea" :rows="3" maxlength="4000" resize="none" placeholder="输入你的目标或补充信息…" :disabled="sending" @keydown.enter.ctrl.prevent="sendMessage"></el-input><div class="composer-actions"><span class="input-hint">Ctrl + Enter 发送</span><el-button type="primary" :loading="sending" :disabled="!inputText.trim()" @click="sendMessage">发送</el-button></div></div>
+<!-- 【修改：聊天布局】左侧对话、右侧计划独立滚动，计划不再混入聊天消息。 -->
+<main v-else-if="view === 'chat'" class="chat-page mc-chat-workspace">
+  <section class="mc-conversation-column">
+    <div class="chat-heading"><div class="eyebrow">面试准备 · 对话工作台</div><h2>{{ chatTitle }}</h2><div class="muted small">在左侧补充或调整需求，在右侧查看计划；确认后才会生效。</div></div>
+    <div class="messages" ref="messageScrollRef" aria-live="polite" @scroll="onChatScroll" @wheel.passive="onChatWheel">
+      <div v-if="!messages.length" class="panel"><h3>先介绍一下你的目标吧</h3><p class="muted">例如：三天后面试 Agent 实习，希望根据已有 RAG 项目练习项目介绍和技术追问。</p></div>
+      <template v-for="message in messages" :key="message.id"><div :class="['message', message.role]"><div v-if="message.content" :class="['bubble', {'mc-streaming': message.streaming}]">{{ message.content }}</div></div></template>
+      <div v-if="sending" class="mc-chat-status" role="status" aria-live="polite"><span class="mc-loading-cube" aria-hidden="true"></span>{{ chatStatus || '正在处理请求…' }}</div>
+    </div>
+    <div v-if="!followChatBottom && messages.length" class="mc-latest-row"><el-button size="small" @click="jumpToLatest">↓ 回到最新消息</el-button><span v-if="sending">回复仍在继续，你可以安心查看历史</span></div>
+    <div class="composer"><el-input v-model="inputText" type="textarea" :rows="3" maxlength="4000" resize="none" placeholder="输入你的目标或修改要求…" :disabled="sending" @keydown="onChatKeydown" @compositionstart="onChatCompositionStart" @compositionend="onChatCompositionEnd"></el-input><div class="composer-actions"><span class="input-hint">Enter 发送 · Shift + Enter 换行</span><el-button type="primary" :loading="sending" :disabled="!inputText.trim()" @click="sendMessage">发送</el-button></div></div>
+  </section>
+  <aside :class="['mc-plan-column', {'mc-plan-updated': planHighlight}]" aria-label="当前计划预览">
+    <header class="mc-plan-preview-header"><div><div class="eyebrow">PLAN PREVIEW</div><h2>你的准备计划</h2></div><el-tag v-if="chatPlan" :type="tagType(chatPlan.status)">{{ statusText(chatPlan.status) }}</el-tag></header>
+    <!-- 【新增：计划更新反馈】常驻摘要，避免错过瞬时提示。 -->
+    <div v-if="planUpdateNotice" :class="['mc-plan-update-notice', {'is-unchanged': !planUpdateNotice.changed}]" role="status" aria-live="polite"><div><strong>{{ planUpdateNotice.title }}</strong><time>{{ planUpdateNotice.time }}</time></div><p>{{ planUpdateNotice.text }}</p><el-button v-if="planUpdateNotice.changed" size="small" text @click="locatePlanChanges">定位本次变化 ↓</el-button></div>
+    <div v-if="chatPlan" class="mc-plan-preview-body" ref="planPreviewRef">
+      <h3 class="mc-plan-goal">{{ chatPlan.goal }}</h3><div class="meta"><span>{{ planDateLabel(chatPlan) }}</span><span>{{ chatPlan.tasks.length }} 项任务</span></div>
+      <p class="mc-preview-note">{{ chatPlan.status === 'draft' ? '当前为草稿，可在左侧提出修改，再打开完整计划表确认。' : '当前为已保存计划；如需调整，可以在左侧说明具体要求。' }}</p>
+      <section v-for="(day, index) in chatPlan.days" :key="day.plan_date" class="mc-preview-day"><div class="mc-preview-day-heading"><b>第 {{ index + 1 }} 天</b><span>{{ day.plan_date }}</span></div><p v-if="day.available_minutes != null" class="muted small">可投入 {{ day.available_minutes }} 分钟</p><ol><li v-for="task in day.tasks" :key="task.id ?? task.position" :class="{'mc-task-changed': taskChangeLabel(task)}"><span v-if="taskChangeLabel(task)" class="mc-task-change-tag">{{ taskChangeLabel(task) }}</span><strong :class="{completed: task.status === 'completed'}">{{ task.title }}</strong><p>{{ task.expected_output }}</p></li></ol><p v-if="!day.tasks.length" class="muted small">当天未安排新任务，可用于巩固或休息。</p></section>
+      <section v-if="!chatPlan.days.length" class="mc-preview-day"><ol><li v-for="(task, index) in chatPlan.tasks" :key="task.id ?? index" :class="{'mc-task-changed': taskChangeLabel(task)}"><span v-if="taskChangeLabel(task)" class="mc-task-change-tag">{{ taskChangeLabel(task) }}</span><strong>{{ task.title }}</strong><p>{{ task.expected_output }}</p></li></ol></section>
+      <div v-if="chatPlan.warnings?.length" class="warnings"><div v-for="(warning, index) in chatPlan.warnings" :key="index">{{ warning }}</div></div>
+    </div>
+    <div v-else class="mc-plan-placeholder"><span class="mc-brand-block" aria-hidden="true"></span><h3>计划将在这里展示</h3><p>生成成功后，这里会展示每天的任务和预期产出。你可以继续在左侧聊天调整。</p></div>
+    <footer v-if="chatPlan" class="mc-plan-preview-footer"><el-button type="primary" @click="openPlan(chatPlan)">{{ chatPlan.status === 'draft' ? '打开完整计划表并确认 →' : '打开完整计划表 →' }}</el-button><span>在完整计划表中管理进度、复盘和模拟面试</span></footer>
+  </aside>
 </main>
+
 
 <!-- 【新增：模拟面试】独立逐题作答页面，结束后回到计划详情展示报告。 -->
 <main v-else-if="view === 'interview'" class="content"><el-button :disabled="interviewBusy" text @click="returnFromInterview">← 返回计划</el-button>
@@ -210,6 +309,8 @@ button:not(:disabled):active,.el-button:not(.is-disabled):active{transform:trans
 <script>
 const {createApp,ref,computed,nextTick}=Vue;
 createApp({setup(){
+  // 【新增：流式聊天】阶段状态只用于展示，不写入聊天记录。
+  const chatStatus = ref('');
   const view=ref('home'),planList=ref([]),currentPlan=ref(null),conversationId=ref(null),messages=ref([]),inputText=ref(''),chatPlan=ref(null),chatTitle=ref('制定新计划');
   const deletingPlanId=ref(null);
   const creating=ref(false),loadingPlans=ref(false),loadingDetail=ref(false),sending=ref(false),confirming=ref(false),reviewing=ref(false),savingTasks=ref([]),listError=ref(''),detailError=ref('');
@@ -255,7 +356,7 @@ createApp({setup(){
       // 【修改：按天规划】提交日期与预算，不再拼接开始/结束钟点。
       const payload={conversation_id:formConversationId.value,goal:f.goal.trim(),target_role:f.target_role.trim(),background:f.background.trim(),job_description:f.job_description.trim(),interview_date:f.interview_date||null,start_date:f.start_date,end_date:f.end_date,focus_areas:[...f.focus_areas],days:f.days.map(d=>({plan_date:d.plan_date,available_minutes:optionalMinutes(d.available_minutes)}))};
       const {data}=await axios.post('/api/plans/draft',payload);if(!data.draft_plan)throw Error('Missing draft plan');
-      conversationId.value=payload.conversation_id;chatPlan.value=normalizePlan({...data.draft_plan,conversation_id:payload.conversation_id});messages.value=[{id:++sequence,role:'user',content:'准备目标：'+payload.goal+'\n目标岗位：'+payload.target_role+'\n计划日期：'+payload.start_date+' 至 '+payload.end_date+'\n每日时长选填，任务不预测耗时。'},{id:++sequence,role:'assistant',content:data.answer||'计划草稿已生成，请查看并确认；需要调整也可以继续告诉我。'}];inputText.value='';chatTitle.value='查看并调整计划草稿';view.value='chat';scrollBottom();
+      conversationId.value=payload.conversation_id;chatPlan.value=normalizePlan({...data.draft_plan,conversation_id:payload.conversation_id});clearPlanUpdateFeedback();messages.value=[{id:++sequence,role:'user',content:'准备目标：'+payload.goal+'\n目标岗位：'+payload.target_role+'\n计划日期：'+payload.start_date+' 至 '+payload.end_date+'\n每日时长选填，任务不预测耗时。'},{id:++sequence,role:'assistant',content:data.answer||'计划草稿已生成，请查看并确认；需要调整也可以继续告诉我。'}];inputText.value='';chatTitle.value='查看并调整计划草稿';view.value='chat';scrollBottom(true);
     }catch(e){const detail=e.response?.data?.detail;formErrors.value=Array.isArray(detail)?detail.map(item=>typeof item==='string'?item:item.msg||'字段校验失败'):[errorText(e,'生成未完成，请确认已注册 POST /api/plans/draft 接口，然后重试。')];}finally{creating.value=false;}
   }
   let detailRequest=0,sequence=0;const taskSnapshots=new Map();
@@ -273,7 +374,119 @@ createApp({setup(){
   const tagType=s=>({draft:'info',active:'success',superseded:'warning',discarded:'danger'}[s]||'info');
   const errorText=(e,fallback)=>{const detail=e.response?.data?.detail;return typeof detail==='string'?detail:fallback;};
   const toast=(e,fallback)=>ElementPlus.ElMessage.error(errorText(e,fallback));
-  const scrollBottom=async()=>{await nextTick();if(messageScrollRef.value)messageScrollRef.value.scrollTop=messageScrollRef.value.scrollHeight;};
+  // 【新增：计划更新反馈】以服务器返回的计划比较，不凭助手文字宣称更新成功。
+  const planUpdateNotice = ref(null), planHighlight = ref(false), planPreviewRef = ref(null);
+  const planTaskChanges = ref({});
+  let planHighlightTimer;
+  const taskPreviewKey = task => String(task.id ?? ('position-' + task.position));
+  const taskChangeLabel = task => planTaskChanges.value[taskPreviewKey(task)] || '';
+  const taskContent = task => JSON.stringify([task.title, task.expected_output, task.plan_date, task.position]);
+
+  function clearPlanUpdateFeedback() {
+    planUpdateNotice.value = null;
+    planTaskChanges.value = {};
+    planHighlight.value = false;
+    clearTimeout(planHighlightTimer);
+  }
+
+  async function locatePlanChanges() {
+    await nextTick();
+    const container = planPreviewRef.value;
+    if (!container) return;
+    const target = container.querySelector('.mc-task-changed');
+    if (target) {
+      container.scrollTop += target.getBoundingClientRect().top - container.getBoundingClientRect().top - 18;
+    } else {
+      container.scrollTop = 0;
+    }
+  }
+
+  function applyChatPlanUpdate(plan, cid) {
+    const previous = chatPlan.value;
+    const next = normalizePlan({...plan, conversation_id: plan.conversation_id || cid});
+    const samePlan = previous && previous.plan_id === next.plan_id;
+    const unused = new Set((previous?.tasks || []).map((_, i) => i));
+    const oldTasks = previous?.tasks || [];
+    const marks = {};
+    let added = 0, modified = 0;
+    for (const task of next.tasks) {
+      let match = -1;
+      // 同一草稿优先按数据库ID定位；新版本先匹配完全相同的任务内容。
+      if (samePlan && task.id != null) match = oldTasks.findIndex((old, i) => unused.has(i) && old.id === task.id);
+      if (match < 0) match = oldTasks.findIndex((old, i) => unused.has(i) && taskContent(old) === taskContent(task));
+      // 新版本可能重建任务ID，按日期和顺序对齐剩余任务。
+      if (match < 0) match = oldTasks.findIndex((old, i) => unused.has(i) && old.plan_date === task.plan_date && old.position === task.position);
+      if (match >= 0) {
+        unused.delete(match);
+        if (taskContent(oldTasks[match]) !== taskContent(task)) {
+          marks[taskPreviewKey(task)] = '已修改'; modified++;
+        }
+      } else {
+        marks[taskPreviewKey(task)] = '新增'; added++;
+      }
+    }
+    const removed = unused.size;
+    const metadataChanged = previous && JSON.stringify([previous.goal, previous.start_date, previous.end_date, previous.days.map(d => [d.plan_date,d.available_minutes]),previous.warnings]) !== JSON.stringify([next.goal,next.start_date,next.end_date,next.days.map(d => [d.plan_date,d.available_minutes]),next.warnings]);
+    const versionChanged = previous && !samePlan;
+    const changed = !previous || added || modified || removed || metadataChanged || versionChanged || previous.status !== next.status;
+    chatPlan.value = next;
+    planTaskChanges.value = marks;
+    clearTimeout(planHighlightTimer);
+    planHighlight.value = false;
+    const counts = [modified ? '修改 ' + modified + ' 项' : '', added ? '新增 ' + added + ' 项' : '', removed ? '移除 ' + removed + ' 项' : ''].filter(Boolean).join('，');
+    const title = !previous ? '计划已生成' : changed ? (versionChanged ? '新计划版本已返回' : '计划已更新') : '计划内容未变化';
+    planUpdateNotice.value = {
+      changed: !!changed,
+      title,
+      text: changed ? (counts || '计划信息或状态已更新') : '本次返回的计划与当前预览一致，请以右侧任务内容为准。',
+      time: new Date().toLocaleTimeString('zh-CN', {hour12:false}),
+    };
+    if (changed) {
+      nextTick().then(() => {
+        planHighlight.value = true;
+        planHighlightTimer = setTimeout(() => {planHighlight.value = false;}, 2200);
+      });
+      ElementPlus.ElMessage.success(title + (counts ? '：' + counts : ''));
+    }
+  }
+
+  // 【修改：流式滚动】向上阅读时暂停跟随，回到底部才恢复。
+  const followChatBottom = ref(true);
+  let lastChatScrollTop = 0;
+
+  function onChatWheel(event) {
+    // 用户向上滚动时立即暂停，避免下一段文字抢先拉回底部。
+    if (event.deltaY < 0) followChatBottom.value = false;
+  }
+
+  function onChatScroll() {
+    const element = messageScrollRef.value;
+    if (!element) return;
+    const distance = Math.max(0, element.scrollHeight - element.scrollTop - element.clientHeight);
+    if (element.scrollTop < lastChatScrollTop - 1) {
+      followChatBottom.value = false;
+    } else if (distance <= 24) {
+      followChatBottom.value = true;
+    }
+    lastChatScrollTop = element.scrollTop;
+  }
+
+  const scrollBottom = async (force = false) => {
+    // 等Vue完成文字渲染后再计算高度；等待期间用户上滚仍会取消跟随。
+    await nextTick();
+    const element = messageScrollRef.value;
+    if (!element) return;
+    if (force) followChatBottom.value = true;
+    if (followChatBottom.value) {
+      element.scrollTop = element.scrollHeight;
+      lastChatScrollTop = element.scrollTop;
+    }
+  };
+
+  function jumpToLatest() {
+    return scrollBottom(true);
+  }
+
   const rememberTasks=()=>{for(const t of currentPlan.value?.tasks||[])taskSnapshots.set(t.id,{actual_minutes:t.actual_minutes??null,note:t.note??null});};
   function goHome(){view.value='home';}
   function createPlan(){
@@ -304,11 +517,138 @@ createApp({setup(){
     try{const {data}=await axios.get(`/api/plans/${plan.plan_id??plan.id}`,{params:{conversation_id:plan.conversation_id||conversationId.value}});if(token!==detailRequest)return;const p=normalizePlan(data.plan);currentPlan.value=p;conversationId.value=p.conversation_id;rememberTasks();await loadInterviewHistory();}
     catch(e){if(token===detailRequest)detailError.value=errorText(e,'计划详情加载失败，请检查详情接口。');}finally{if(token===detailRequest)loadingDetail.value=false;}
   }
-  async function continueChat(){if(!currentPlan.value||sending.value||reviewing.value)return;try{const {data}=await axios.get(`/api/conversations/${currentPlan.value.conversation_id}`);conversationId.value=currentPlan.value.conversation_id;messages.value=(data.messages||[]).map(m=>({...m,id:++sequence}));chatPlan.value=currentPlan.value;chatTitle.value='继续完善计划';view.value='chat';await scrollBottom();}catch(e){toast(e,'聊天记录加载失败');}}
-  async function sendMessage(){
-    const text=inputText.value.trim();if(!text||sending.value||!conversationId.value)return;const cid=conversationId.value;sending.value=true;messages.value.push({id:++sequence,role:'user',content:text});inputText.value='';scrollBottom();
-    try{const {data}=await axios.post('/api/chat',{conversation_id:cid,question:text,plan_id:chatPlan.value?.plan_id??null});messages.value.push({id:++sequence,role:'assistant',content:data.answer||'本次请求未返回文字回答。'});const p=data.draft_plan||data.active_plan;if(p)chatPlan.value=normalizePlan({...p,conversation_id:p.conversation_id||cid});}
-    catch(e){messages.value.push({id:++sequence,role:'assistant',content:errorText(e,'本次请求未完成，请稍后重试。')});}finally{sending.value=false;scrollBottom();}
+  async function continueChat(){if(!currentPlan.value||sending.value||reviewing.value)return;try{const {data}=await axios.get(`/api/conversations/${currentPlan.value.conversation_id}`);conversationId.value=currentPlan.value.conversation_id;messages.value=(data.messages||[]).map(m=>({...m,id:++sequence}));chatPlan.value=currentPlan.value;clearPlanUpdateFeedback();chatTitle.value='继续完善计划';view.value='chat';await scrollBottom(true);}catch(e){toast(e,'聊天记录加载失败');}}
+  // 【修改：流式聊天】一次请求读取SSE，不再同时调用原/api/chat。
+  // 【修改：聊天快捷键】Enter发送，Shift+Enter换行；输入法选词不触发发送。
+  let chatComposing = false;
+  function onChatCompositionStart() { chatComposing = true; }
+  function onChatCompositionEnd() { chatComposing = false; }
+  function onChatKeydown(event) {
+    if (event.key !== 'Enter' || event.shiftKey) return;
+    if (event.isComposing || chatComposing || event.keyCode === 229) return;
+    if (event.ctrlKey || event.altKey || event.metaKey) return;
+    event.preventDefault();
+    if (event.repeat || sending.value || !inputText.value.trim()) return;
+    sendMessage();
+  }
+
+  async function sendMessage() {
+    const text = inputText.value.trim();
+    if (!text || sending.value || !conversationId.value) return;
+
+    const cid = conversationId.value;
+    const selectedPlanId = chatPlan.value?.plan_id ?? null;
+    // 【修改：流式滚动】主动发送新问题时重新跟随。
+    followChatBottom.value = true;
+    sending.value = true;
+    chatStatus.value = '正在连接助手…';
+    messages.value.push({id: ++sequence, role: 'user', content: text});
+    inputText.value = '';
+
+    const answerId = ++sequence;
+    messages.value.push({id: answerId, role: 'assistant', content: '', streaming: true});
+    const answerMessage = () => messages.value.find(m => m.id === answerId);
+    let reader;
+    let doneReceived = false;
+    let resultReceived = false;
+
+    function handleEvent(block) {
+      let event = 'message';
+      const dataLines = [];
+      for (const line of block.split(/\r?\n/)) {
+        if (line.startsWith('event:')) event = line.slice(6).trim();
+        else if (line.startsWith('data:')) dataLines.push(line.slice(5).replace(/^ /, ''));
+      }
+      if (!dataLines.length) return; // 忽略SSE心跳及注释。
+      const data = JSON.parse(dataLines.join('\n'));
+      const message = answerMessage();
+      if (event === 'status') {
+        chatStatus.value = data.message || '正在处理请求…';
+      } else if (event === 'reset') {
+        if (message) message.content = '';
+      } else if (event === 'token') {
+        if (message && typeof data.text === 'string') message.content += data.text;
+        chatStatus.value = '助手正在回复…';
+        scrollBottom();
+      } else if (event === 'result') {
+        if (typeof data.answer !== 'string' || !data.answer.trim()) {
+          throw new Error('后端未返回完整回答');
+        }
+        // 用最终已保存回答校准逐字内容，不重复新增助手消息。
+        if (message) message.content = data.answer;
+        const plan = data.draft_plan || data.active_plan;
+        if (plan) {
+          applyChatPlanUpdate(plan, cid);
+        } else if (chatPlan.value) {
+          planUpdateNotice.value = {changed:false,title:'本次未返回计划更新',text:'当前预览保持不变；请核对聊天中的处理结果。',time:new Date().toLocaleTimeString('zh-CN',{hour12:false})};
+          planTaskChanges.value = {};
+        }
+        resultReceived = true;
+        chatStatus.value = '回复已完成，正在同步结果…';
+      } else if (event === 'done') {
+        doneReceived = true;
+        chatStatus.value = '';
+      } else if (event === 'error') {
+        throw new Error(data.message || '本次回复未完成，请稍后重试');
+      }
+    }
+
+    try {
+      await scrollBottom();
+      const response = await fetch('/api/chat/stream', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'Accept': 'text/event-stream'},
+        body: JSON.stringify({conversation_id: cid, question: text, plan_id: selectedPlanId}),
+      });
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        if (response.status === 404) throw new Error('流式聊天接口尚未接入，请先在后端添加 /api/chat/stream');
+        throw new Error(typeof error.detail === 'string' ? error.detail : '聊天请求失败（HTTP ' + response.status + '）');
+      }
+      if (!response.headers.get('content-type')?.includes('text/event-stream')) {
+        throw new Error('后端未返回事件流，请检查 /api/chat/stream 的响应类型');
+      }
+      if (!response.body) throw new Error('浏览器未提供可读取的响应流');
+      reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      function consumeBuffer() {
+        let match;
+        // 同时支持LF/CRLF；保留未完成事件，避免网络分块拆坏中文或JSON。
+        while ((match = /\r?\n\r?\n/.exec(buffer)) !== null) {
+          const block = buffer.slice(0, match.index);
+          buffer = buffer.slice(match.index + match[0].length);
+          if (block.trim()) handleEvent(block);
+        }
+      }
+      while (true) {
+        const {value, done} = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, {stream: true});
+        consumeBuffer();
+      }
+      buffer += decoder.decode();
+      consumeBuffer();
+      if (!doneReceived || !resultReceived) {
+        throw new Error(resultReceived ? '回答已返回，但连接在结束确认前中断；可重新打开会话核对。' : '连接已中断，本次回复可能未完成');
+      }
+    } catch (error) {
+      const message = answerMessage();
+      if (message) {
+        const notice = error.message || '本次回复未完成，请稍后重试';
+        message.content = message.content ? message.content + '\n\n【连接提示】' + notice : notice;
+      }
+      if (reader) await reader.cancel().catch(() => {});
+      // 不自动重发请求，避免重复执行规划或其他写入工具。
+    } finally {
+      if (reader) reader.releaseLock();
+      const message = answerMessage();
+      if (message) message.streaming = false;
+      sending.value = false;
+      chatStatus.value = '';
+      scrollBottom();
+    }
   }
   async function confirmCurrentPlan(){const p=currentPlan.value;if(!p||confirming.value)return;confirming.value=true;try{const {data}=await axios.post(`/api/plans/${p.plan_id}/confirm`,{conversation_id:p.conversation_id});if(currentPlan.value?.plan_id===p.plan_id)currentPlan.value=normalizePlan(data.active_plan||{...p,status:'active'});if(chatPlan.value?.plan_id===p.plan_id)chatPlan.value=currentPlan.value;rememberTasks();ElementPlus.ElMessage.success('计划已确认');}catch(e){toast(e,'确认失败');}finally{confirming.value=false;}}
   async function patchTask(task,payload){const p=currentPlan.value;if(!p||p.status!=='active'||task.id==null||savingTasks.value.includes(task.id))return false;savingTasks.value.push(task.id);try{const {data}=await axios.patch(`/api/tasks/${task.id}`,{conversation_id:p.conversation_id,...payload});Object.assign(task,data.task||payload);taskSnapshots.set(task.id,{actual_minutes:task.actual_minutes??null,note:task.note??null});return true;}catch(e){toast(e,'任务保存失败，请重试');return false;}finally{savingTasks.value=savingTasks.value.filter(id=>id!==task.id);}}
@@ -366,7 +706,7 @@ createApp({setup(){
     if(data){interviewDraft.value=normalizePlan(data.draft_plan);ElementPlus.ElMessage.success(data.message);await loadInterviewHistory();}
   }
 
-  return{interviewHistoryError,interviewHistory,planVersions,interviewSession,interviewBusy,interviewScope,interviewType,interviewCount,interviewAnswer,pendingInterviewTurn,replanOpen,replanStart,replanDays,replanMinutes,interviewDraft,interviewStatus,loadInterviewHistory,openInterviewRecord,beginInterview,submitInterviewAnswer,continueInterview,finishInterview,returnFromInterview,markInterviewReady,replanFromInterview,planDateLabel,planForm,uniformBudget,formErrors,dateError,focusOptions,weekday,syncFormDays,applyUniformBudget,applyLearningDays,learningDays,submitPlanForm,validatePlanForm,deletePlan,deletingPlanId,view,planList,currentPlan,conversationId,messages,inputText,chatPlan,chatTitle,creating,loadingPlans,loadingDetail,sending,confirming,reviewing,savingTasks,listError,detailError,reviewOpen,reviewFeedback,reviewAnswer,reviewData,revisedPlan,reviewPanelRef,messageScrollRef,canEdit,totalMinutes,completedCount,statusText,tagType,goHome,createPlan,showPlans,loadPlans,openPlan,continueChat,sendMessage,confirmCurrentPlan,toggleTask,saveTaskField,openReview,submitReview,reviewEntries,startInterview};
+  return{planUpdateNotice,planHighlight,planPreviewRef,taskChangeLabel,locatePlanChanges,onChatKeydown,onChatCompositionStart,onChatCompositionEnd,followChatBottom,onChatScroll,onChatWheel,jumpToLatest,chatStatus,interviewHistoryError,interviewHistory,planVersions,interviewSession,interviewBusy,interviewScope,interviewType,interviewCount,interviewAnswer,pendingInterviewTurn,replanOpen,replanStart,replanDays,replanMinutes,interviewDraft,interviewStatus,loadInterviewHistory,openInterviewRecord,beginInterview,submitInterviewAnswer,continueInterview,finishInterview,returnFromInterview,markInterviewReady,replanFromInterview,planDateLabel,planForm,uniformBudget,formErrors,dateError,focusOptions,weekday,syncFormDays,applyUniformBudget,applyLearningDays,learningDays,submitPlanForm,validatePlanForm,deletePlan,deletingPlanId,view,planList,currentPlan,conversationId,messages,inputText,chatPlan,chatTitle,creating,loadingPlans,loadingDetail,sending,confirming,reviewing,savingTasks,listError,detailError,reviewOpen,reviewFeedback,reviewAnswer,reviewData,revisedPlan,reviewPanelRef,messageScrollRef,canEdit,totalMinutes,completedCount,statusText,tagType,goHome,createPlan,showPlans,loadPlans,openPlan,continueChat,sendMessage,confirmCurrentPlan,toggleTask,saveTaskField,openReview,submitReview,reviewEntries,startInterview};
 }}).use(ElementPlus).mount('#app');
 </script>
 
@@ -376,7 +716,7 @@ createApp({setup(){
   const showClick = (event) => {
     const button = event.target.closest?.('button, [role="button"], summary');
     if (!button || button.disabled || button.getAttribute('aria-disabled') === 'true' || button.classList.contains('is-disabled')) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (document.documentElement.dataset.motion === 'off' || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const bounds = button.getBoundingClientRect();
     const effect = document.createElement('span');
     effect.className = 'mc-click-burst';
@@ -387,6 +727,37 @@ createApp({setup(){
     window.setTimeout(() => effect.remove(), 500);
   };
   document.addEventListener('click', showClick, true);
+})();
+</script>
+
+<!-- 【新增：MC动态效果】保存本机动效偏好，并尊重系统减少动态效果设置。 -->
+<script>
+(() => {
+  const button = document.getElementById('mc-motion-toggle');
+  const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+  let preference = null;
+  try { preference = localStorage.getItem('mc-motion-enabled'); } catch (_) {}
+  function applyMotion(enabled) {
+    document.documentElement.dataset.motion = enabled ? 'on' : 'off';
+    button.setAttribute('aria-pressed', String(enabled));
+    button.textContent = enabled ? '动态：开' : '动态：关';
+  }
+  applyMotion(!media.matches && preference !== 'off');
+  button.addEventListener('click', () => {
+    const enabled = document.documentElement.dataset.motion !== 'on';
+    applyMotion(enabled && !media.matches);
+    preference = enabled ? 'on' : 'off';
+    try { localStorage.setItem('mc-motion-enabled', preference); } catch (_) {}
+    if (enabled && media.matches) {
+      button.title = '系统已启用减少动态效果，当前保持关闭';
+    }
+  });
+  media.addEventListener?.('change', () => applyMotion(!media.matches && preference !== 'off'));
+  document.addEventListener('visibilitychange', () => {
+    document.querySelectorAll('.mc-ambient i, .mc-scene rect').forEach(element => {
+      element.style.animationPlayState = document.hidden ? 'paused' : '';
+    });
+  });
 })();
 </script>
 </body>

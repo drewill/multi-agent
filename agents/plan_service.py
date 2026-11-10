@@ -85,3 +85,85 @@ def confirm_plan(*,conversation_id,plan_id):
         p.status='active';p.confirmed_at=utc_now()
         for other in s.scalars(select(Plan).where(Plan.group_key==p.group_key,Plan.conversation_id==conversation_id,Plan.status=='draft',Plan.id!=p.id)):other.status='discarded'
         s.flush();return {'ok':True,'plan_id':p.id,'status':'active'}
+
+
+# 【新增：修改草稿】不经过正式计划的版本创建流程。
+from schemas import DraftTaskReplacement
+
+
+def update_draft_tasks(
+    *,
+    conversation_id: str,
+    plan_id: int,
+    replacements: list,
+) -> dict:
+    """修改当前会话内的草稿任务，保持计划ID和其他任务不变。"""
+
+    if not replacements:
+        raise ValueError("至少需要提供一项任务修改")
+
+    # 先校验全部输入，再开始数据库写入。
+    items = [
+        DraftTaskReplacement.model_validate(item)
+        for item in replacements
+    ]
+
+    task_ids = [item.task_id for item in items]
+
+    if len(task_ids) != len(set(task_ids)):
+        raise ValueError("同一次修改不能重复指定同一个任务")
+
+    # 全部任务在一个事务中修改，任意一项失败则全部回滚。
+    with SessionLocal.begin() as session:
+        plan = session.get(Plan, plan_id)
+
+        if (
+            plan is None
+            or plan.conversation_id != conversation_id
+        ):
+            raise LookupError("当前会话中不存在这份计划")
+
+        if plan.status != "draft":
+            raise ValueError(
+                "此工具只能修改草稿；正式计划请生成调整版本"
+            )
+
+        tasks = session.scalars(
+            select(Task).where(
+                Task.plan_id == plan_id,
+                Task.id.in_(task_ids),
+            )
+        ).all()
+
+        # 防止模型传入其他计划中的任务ID。
+        if len(tasks) != len(task_ids):
+            raise ValueError(
+                "部分任务不存在或不属于当前草稿，请重新读取计划"
+            )
+
+        tasks_by_id = {
+            task.id: task
+            for task in tasks
+        }
+
+        for item in items:
+            task = tasks_by_id[item.task_id]
+
+            # 只修改明确允许的两个字段。
+            task.title = item.title
+            task.expected_output = item.expected_output
+
+        # 正常退出事务后才会提交。
+        response = {
+            "ok": True,
+            "draft_plan_id": plan.id,
+            "status": "draft",
+            "updated_task_ids": task_ids,
+            "updated_count": len(items),
+            "message": (
+                f"已更新草稿中的{len(items)}项任务，"
+                "其余任务、日期和顺序保持不变，等待用户确认"
+            ),
+        }
+
+    return response

@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 import os
 
 from sqlalchemy import select
-from agents.plan_service import validate_and_save_draft
+#from agents.plan_service import validate_and_save_draft
 from datasets import AgentEvent, Plan, Review, SessionLocal, Task
 from repository import repository_get_plan, repository_save_message
 # 【修改：按天规划】 复用新的计划查询/任务序列化，并找回表单背景。
@@ -21,6 +21,13 @@ from agents.planner import planner_agent
 from agents.revs import reviewer
 from langgraph.checkpoint.memory import InMemorySaver
 from model_config import model
+
+from agents.plan_service import (
+    validate_and_save_draft,
+    update_draft_tasks as save_draft_task_changes,
+)
+
+from schemas import DraftTaskReplacement
 
 from datetime import date, datetime, timezone, timedelta
 memory = InMemorySaver()
@@ -211,9 +218,48 @@ def build_coordinator(
 
     now_text = datetime.now(BEIJING).isoformat()
 
+        # 【新增：修改草稿】conversation_id由后端绑定，不由模型填写。
+    @tool
+    def update_draft_tasks(
+        plan_id: int,
+        replacements: list[DraftTaskReplacement],
+    ) -> dict:
+        """修改当前会话中尚未确认的计划草稿，只更新指定任务。
+
+        Args:
+            plan_id: 当前草稿的真实计划ID。
+            replacements: 要替换的任务列表，每项包含task_id、
+                title和expected_output。task_id必须来自当前计划，
+                不得猜测。未指定的任务保持不变。
+        """
+
+        try:
+            result = save_draft_task_changes(
+                conversation_id=conversation_id,
+                plan_id=plan_id,
+                replacements=[
+                    item.model_dump()
+                    for item in replacements
+                ],
+            )
+
+            # execute_chat结束后据此返回更新后的草稿，
+            # 前端现有的计划卡片同步逻辑可以继续使用。
+            collected["plan_id"] = result["draft_plan_id"]
+
+            return result
+
+        except (ValueError, LookupError) as exc:
+            # 返回匹配本次调用的工具结果，不让校验异常直接中断。
+            return {
+                "ok": False,
+                "status": "validation_failed",
+                "error": str(exc),
+            }
+
     return create_agent(
         model=model,
-        tools=[delegate_planning, delegate_review],
+        tools=[delegate_planning, delegate_review,update_draft_tasks],
         system_prompt=f"""
 【修改：按天规划】本提示词已改为日期范围与每日预算，不再安排钟点。
 你是面试备战助手中的协调 Agent，帮助用户把求职目标转化为可执行的准备任务，并根据执行情况调整计划。
@@ -260,6 +306,33 @@ def build_coordinator(
 使用自然、简洁的中文。先说明处理结果，再交代用户下一步操作。
 草稿保存成功后，简述准备重点，并提醒“查看计划表并确认”，不重复粘贴整份任务表。
 区分已知事实、建议和待确认事项，不展示内部推理或冗长工具过程。
+
+【修改草稿的规则】
+
+1. 当前计划为draft状态，用户要求替换某些任务时，
+   使用update_draft_tasks，不使用delegate_planning的parent_plan_id。
+
+2. 从后端提供的draft_plan.tasks读取真实task_id。
+   “最后N个任务”按position升序、id升序确定最后N项，
+   不能理解为最后N天，也不能猜测任务ID。
+
+3. 只提交需要修改的任务。
+   默认保留日期、任务顺序和其余任务，不重新生成整份计划。
+
+4. 用户已明确说“替换”“都替换掉”，即授权修改草稿。
+   未指定替换内容时，根据岗位目标和已有任务提出合理的新内容，
+   直接调用工具保存，不反复要求用户回复“按建议”或再次确认。
+
+5. 新内容应与原任务有实质区别，并给出具体、可检查的预期产出。
+   只有目标计划或目标任务确实不明确时才追问。
+
+6. 工具返回ok=true后，才能说修改已保存。
+   简要说明修改内容，并提醒查看草稿。
+   草稿仍需用户在页面确认后才能正式生效。
+
+7. 如果当前计划为active状态，继续使用delegate_planning，
+   以该正式计划ID作为parent_plan_id生成调整草稿。
+   不调用update_draft_tasks修改正式计划。
 """,
         checkpointer=memory,
     )
@@ -290,6 +363,7 @@ def execute_chat(
     conversation_id: str,
     question: str,
     plan_id: int | None = None,  # 【修改：按天规划】聊天绑定当前打开的整份计划。
+    emit=None,  # 【新增：流式聊天】向前端发送事件的函数
 ) -> dict:
     run_id = uuid4().hex
     collected = {}
@@ -340,28 +414,148 @@ def execute_chat(
     )
 
     try:
-        result = coordinator.invoke(
-            {
-                "messages": [{
-                    "role": "user",
-                    "content": (
-                        "用户消息：\n"
-                        + question
-                        + "\n\n后端提供的当前计划信息：\n"
-                        + json.dumps(
-                            plan_context,
-                            ensure_ascii=False,
+        # result = coordinator.invoke(
+        #     {
+        #         "messages": [{
+        #             "role": "user",
+        #             "content": (
+        #                 "用户消息：\n"
+        #                 + question
+        #                 + "\n\n后端提供的当前计划信息：\n"
+        #                 + json.dumps(
+        #                     plan_context,
+        #                     ensure_ascii=False,
+        #                 )
+        #             ),
+        #         }]
+        #     },
+        #     config={
+        #         "configurable": {
+        #             "thread_id": conversation_id,
+        #         },
+        #         "recursion_limit": 20,
+        #     },
+        # )
+                # 【新增：流式聊天】普通接口和流式接口复用同一份输入。
+        agent_input = {
+            "messages": [{
+                "role": "user",
+                "content": (
+                    "用户消息：\n"
+                    + question
+                    + "\n\n后端提供的当前计划信息：\n"
+                    + json.dumps(plan_context, ensure_ascii=False)
+                ),
+            }]
+        }
+
+        invoke_config = {
+            "configurable": {
+                "thread_id": conversation_id,
+            },
+            "recursion_limit": 20,
+        }
+
+        if emit is None:
+            # 原来的非流式接口继续可用。
+            result = coordinator.invoke(
+                agent_input,
+                config=invoke_config,
+            )
+
+        else:
+            emit("status", {
+                "message": "协调助手正在处理你的请求…"
+            })
+
+            result = None
+            current_message_id = None
+
+            # messages：模型文字；updates：节点更新；values：完整状态。
+            # subgraphs=True 后，namespace可用于区分外层与子Agent。
+            for namespace, mode, data in coordinator.stream(
+                agent_input,
+                config=invoke_config,
+                stream_mode=["messages", "updates", "values"],
+                subgraphs=True,
+            ):
+                # 只展示外层协调Agent，不展示子Agent内部结构化内容。
+                if namespace:
+                    continue
+
+                if mode == "values":
+                    result = data
+                    continue
+
+                if mode == "updates":
+                    for update in data.values():
+                        if not isinstance(update, dict):
+                            continue
+
+                        for message in update.get("messages", []):
+                            calls = getattr(
+                                message,
+                                "tool_calls",
+                                None,
+                            )
+
+                            if calls:
+                                names = {
+                                    call.get("name")
+                                    for call in calls
+                                }
+
+                                if "delegate_planning" in names:
+                                    text = "规划助手正在制定任务并校验草稿…"
+                                elif "delegate_review" in names:
+                                    text = "复盘助手正在分析执行记录…"
+                                else:
+                                    text = "正在执行相关操作…"
+
+                                emit("status", {"message": text})
+
+                            elif getattr(message, "type", "") == "tool":
+                                emit("status", {
+                                    "message": "处理结果已返回，正在整理回复…"
+                                })
+
+                    continue
+
+                if mode == "messages":
+                    chunk, metadata = data
+
+                    if metadata.get("langgraph_node") != "model":
+                        continue
+
+                    # 新一轮模型回复开始时，清除上一轮临时文字。
+                    # 避免工具调用前后的文字混在一起。
+                    message_id = getattr(chunk, "id", None)
+
+                    if (
+                        message_id is not None
+                        and message_id != current_message_id
+                    ):
+                        current_message_id = message_id
+                        emit("reset", {})
+
+                    content = chunk.content
+
+                    if isinstance(content, str):
+                        text = content
+                    else:
+                        # 只展示文本，不发送工具参数和推理内容。
+                        text = "".join(
+                            block.get("text", "")
+                            for block in content
+                            if isinstance(block, dict)
+                            and block.get("type") == "text"
                         )
-                    ),
-                }]
-            },
-            config={
-                "configurable": {
-                    "thread_id": conversation_id,
-                },
-                "recursion_limit": 20,
-            },
-        )
+
+                    if text:
+                        emit("token", {"text": text})
+
+            if result is None:
+                raise RuntimeError("Agent没有返回最终状态")
 
         answer = message_text(result["messages"][-1])
 

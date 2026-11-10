@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="330" viewBox="0 0 1200 330" role="img" aria-label="模拟面试报告截图待补充">
+<rect x="1" y="1" width="1198" height="328" rx="8" fill="#f2f4eb" stroke="#cdd8bd"/>
+<rect x="42" y="38" width="9" height="9" fill="#89a35f"/><text x="65" y="48" fill="#7d9164" font-family="sans-serif" font-size="13" letter-spacing="2">SCREENSHOT PLACEHOLDER / 截图占位</text>
+<rect x="548" y="95" width="104" height="72" rx="3" fill="none" stroke="#aabd92" stroke-width="3"/><circle cx="573" cy="117" r="6" fill="#aabd92"/><path d="M553 157L583 130L603 147L621 130L647 158" fill="none" stroke="#aabd92" stroke-width="3"/>
+<text x="600" y="216" text-anchor="middle" fill="#3f5e31" font-family="sans-serif" font-size="24" font-weight="600">模拟面试报告 · 待替换真实截图</text>
+<text x="600" y="250" text-anchor="middle" fill="#829471" font-family="sans-serif" font-size="15">逐题反馈、薄弱点与计划调整入口</text>
+<text x="600" y="285" text-anchor="middle" fill="#a0ad92" font-family="sans-serif" font-size="12">此图仅用于排版占位，不代表实际页面</text>
+</svg>

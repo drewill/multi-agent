@@ -22,6 +22,8 @@ from agents.revs import reviewer
 from langgraph.checkpoint.memory import InMemorySaver
 from model_config import model
 
+import logging
+
 from agents.plan_service import (
     validate_and_save_draft,
     update_draft_tasks as save_draft_task_changes,
@@ -32,6 +34,10 @@ from schemas import DraftTaskReplacement
 from datetime import date, datetime, timezone, timedelta
 memory = InMemorySaver()
 BEIJING = timezone(timedelta(hours=8))
+
+
+
+logger = logging.getLogger(__name__)
 
 def log_event(
     conversation_id: str,
@@ -659,6 +665,15 @@ def execute_review(
         })
 
         review_result = result["structured_response"]
+        if review_result is None:
+            logger.error(
+            "复盘缺少结构化结果，返回字段：%s",
+            list(result.keys()),
+            )
+            raise ValueError(
+                "复盘模型未返回有效的结构化结果，本次复盘未保存"
+            )
+        review_result = ReviewResult.model_validate(review_result)
         review_data = review_result.model_dump(mode="json")
 
         with SessionLocal.begin() as session:

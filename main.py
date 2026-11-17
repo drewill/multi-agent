@@ -25,7 +25,7 @@ from queue import Queue, Empty
 from threading import Thread
 from fastapi.responses import StreamingResponse
 
-from agents.coordinator import execute_chat, get_events, get_owned_plan, get_plan_view, task_to_dict
+from agents.coordinator import execute_chat, execute_review, get_events, get_owned_plan, get_plan_view, task_to_dict
 from datasets import (
     init_database,
     SessionLocal,
@@ -131,12 +131,6 @@ def require_conversation(conversation_id: str):
                 status_code=404,
                 detail="会话不存在",
             )
-
-
-
-
-
-
 
 # ============================================================
 # 6. 页面
@@ -432,6 +426,7 @@ def update_task(
 
 @app.post("/api/reviews")
 def review_plan(body: ReviewRequest):
+    result={}
     require_conversation(body.conversation_id)
 
     feedback = body.feedback.strip()
@@ -451,17 +446,23 @@ def review_plan(body: ReviewRequest):
                 raise ValueError("请先确认计划，再进行复盘")
 
             # 让协调Agent处理复盘，并视条件决定是否重新规划。
-            result = execute_chat(
+            results = execute_review(
                 body.conversation_id,
-                (
-                    f"请调用复盘工具，复盘已确认计划 #{body.plan_id}。\n"
-                    f"我的执行反馈：{feedback}\n"
-                    "如果需要调整且时间条件明确，请生成调整草稿；"
-                    "条件不明确时先追问，不自行假定剩余时间。"
-                ),
-                plan_id=body.plan_id,  # 【修改：按天规划】复盘绑定用户打开的这份计划。
+                uuid4().hex,
+                body.plan_id,
+                feedback,
             )
-
+            # result = execute_chat(
+            #     body.conversation_id,
+            #     (
+            #         f"请调用复盘工具，复盘已确认计划 #{body.plan_id}。\n"
+            #         f"我的执行反馈：{feedback}\n"
+            #         "如果需要调整且时间条件明确，请生成调整草稿；"
+            #         "条件不明确时先追问，不自行假定剩余时间。"
+            #     ),
+            #     plan_id=body.plan_id,  # 【修改：按天规划】复盘绑定用户打开的这份计划。
+            # )
+            result["review"] = results
             if result["review"] is None:
                 raise ValueError("未产生复盘结果，请重试")
 

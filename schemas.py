@@ -57,7 +57,8 @@ class PlanFormRequest(BaseModel):
     @model_validator(mode='after')
     def dates(self):
         n=(self.end_date-self.start_date).days+1
-        if not 1<=n<=14:raise ValueError('计划范围必须为1至14天')
+        if not 1<=n<=14:
+            raise ValueError('计划范围必须为1至14天')
         expected={self.start_date+timedelta(days=i) for i in range(n)}
         dates=[d.plan_date for d in self.days]
         if len(dates)!=len(set(dates)) or set(dates)!=expected:raise ValueError('每日预算须完整覆盖日期范围且不能重复')

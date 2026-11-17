@@ -292,8 +292,12 @@ multi-agent/
 
 验收报告建议保存为 `docs/验收报告.md`，记录测试环境、代码版本、实际结果与复测过程。只将真正执行过的用例计入通过项。
 
+
 <!-- 验收报告上传后，可以取消下面这行注释。 -->
 <!-- 详细记录：[功能验收报告](docs/acceptance-report.md) -->
+## 问题排查记录
+
+- [复盘结构化结果为空及后续工具消息异常](docs/bug-reports/review-structured-output.md)
 
 ## 当前边界
 

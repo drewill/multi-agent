@@ -1,85 +1,19 @@
+from datetime import datetime, timedelta, timezone
+from langgraph.checkpoint.memory import InMemorySaver
 import json
 from time import perf_counter
-from uuid import uuid4
+
 from langchain_core.tools import tool
 
 from langchain.agents import create_agent
-from langchain.agents.structured_output import ToolStrategy
-from langchain.chat_models import init_chat_model
 
-from dotenv import load_dotenv
-import os
-
-from sqlalchemy import select
-#from agents.plan_service import validate_and_save_draft
-from datasets import AgentEvent, Plan, Review, SessionLocal, Task
-from repository import repository_get_plan, repository_save_message
-# 【修改：按天规划】 复用新的计划查询/任务序列化，并找回表单背景。
-from repository import repository_get_current_plans, repository_get_messages, task_to_dict as serialize_task
-from schemas import PlanDraft,TaskDraft,ReviewResult
+from database.respository.events import log_event
+from database.respository.plans_tasks import get_owned_plan, validate_and_save_draft
 from agents.planner import planner_agent
-from agents.revs import reviewer
-from langgraph.checkpoint.memory import InMemorySaver
+from services.review_service import execute_review
 from model_config import model
-
-import logging
-
-from agents.plan_service import (
-    validate_and_save_draft,
-    update_draft_tasks as save_draft_task_changes,
-)
-
-from schemas import DraftTaskReplacement
-
-from datetime import date, datetime, timezone, timedelta
-memory = InMemorySaver()
 BEIJING = timezone(timedelta(hours=8))
-
-
-
-logger = logging.getLogger(__name__)
-
-def log_event(
-    conversation_id: str,
-    run_id: str,
-    agent_name: str,
-    event_type: str,
-    summary: str,
-    duration_ms: int | None = None,
-):
-    with SessionLocal.begin() as session:
-        session.add(
-            AgentEvent(
-                conversation_id=conversation_id,
-                run_id=run_id,
-                agent_name=agent_name,
-                event_type=event_type,
-                summary=summary,
-                duration_ms=duration_ms,
-            )
-        )
-
-def get_owned_plan(
-    conversation_id: str,
-    plan_id: int,
-) -> dict:
-    """读取完整计划，并检查所属会话。"""
-
-    data = repository_get_plan(plan_id)
-
-    if (
-        not data.get("ok")
-        or data["plan"]["conversation_id"] != conversation_id
-        or data["plan"]["status"] == "discarded"
-    ):
-        raise LookupError("当前会话中不存在这份计划")
-
-    return {
-        **data["plan"],
-        "tasks": data["tasks"],
-    }
-
-
+memory = InMemorySaver()
 def build_coordinator(
     conversation_id: str,
     run_id: str,
@@ -225,47 +159,47 @@ def build_coordinator(
     now_text = datetime.now(BEIJING).isoformat()
 
         # 【新增：修改草稿】conversation_id由后端绑定，不由模型填写。
-    @tool
-    def update_draft_tasks(
-        plan_id: int,
-        replacements: list[DraftTaskReplacement],
-    ) -> dict:
-        """修改当前会话中尚未确认的计划草稿，只更新指定任务。
+    # @tool
+    # def update_draft_tasks(
+    #     plan_id: int,
+    #     replacements: list[DraftTaskReplacement],
+    # ) -> dict:
+    #     """修改当前会话中尚未确认的计划草稿，只更新指定任务。
 
-        Args:
-            plan_id: 当前草稿的真实计划ID。
-            replacements: 要替换的任务列表，每项包含task_id、
-                title和expected_output。task_id必须来自当前计划，
-                不得猜测。未指定的任务保持不变。
-        """
+    #     Args:
+    #         plan_id: 当前草稿的真实计划ID。
+    #         replacements: 要替换的任务列表，每项包含task_id、
+    #             title和expected_output。task_id必须来自当前计划，
+    #             不得猜测。未指定的任务保持不变。
+    #     """
 
-        try:
-            result = save_draft_task_changes(
-                conversation_id=conversation_id,
-                plan_id=plan_id,
-                replacements=[
-                    item.model_dump()
-                    for item in replacements
-                ],
-            )
+    #     try:
+    #         result = save_draft_task_changes(
+    #             conversation_id=conversation_id,
+    #             plan_id=plan_id,
+    #             replacements=[
+    #                 item.model_dump()
+    #                 for item in replacements
+    #             ],
+    #         )
 
-            # execute_chat结束后据此返回更新后的草稿，
-            # 前端现有的计划卡片同步逻辑可以继续使用。
-            collected["plan_id"] = result["draft_plan_id"]
+    #         # execute_chat结束后据此返回更新后的草稿，
+    #         # 前端现有的计划卡片同步逻辑可以继续使用。
+    #         collected["plan_id"] = result["draft_plan_id"]
 
-            return result
+    #         return result
 
-        except (ValueError, LookupError) as exc:
-            # 返回匹配本次调用的工具结果，不让校验异常直接中断。
-            return {
-                "ok": False,
-                "status": "validation_failed",
-                "error": str(exc),
-            }
+    #     except (ValueError, LookupError) as exc:
+    #         # 返回匹配本次调用的工具结果，不让校验异常直接中断。
+    #         return {
+    #             "ok": False,
+    #             "status": "validation_failed",
+    #             "error": str(exc),
+    #         }
 
     return create_agent(
         model=model,
-        tools=[delegate_planning, delegate_review,update_draft_tasks],
+        tools=[delegate_planning, delegate_review,],
         system_prompt=f"""
 【修改：按天规划】本提示词已改为日期范围与每日预算，不再安排钟点。
 你是面试备战助手中的协调 Agent，帮助用户把求职目标转化为可执行的准备任务，并根据执行情况调整计划。
@@ -342,478 +276,3 @@ def build_coordinator(
 """,
         checkpointer=memory,
     )
-
-def get_plan_view(conversation_id: str, preferred_plan_id: int | None = None) -> dict:
-    """【修改：按天规划】同一份多天计划按版本分组，不能仅按某一天查询。"""
-    return repository_get_current_plans(conversation_id, preferred_plan_id)
-
-def message_text(message) -> str:
-    content = message.content
-
-    if isinstance(content, str):
-        return content
-
-    parts = []
-
-    for block in content:
-        if isinstance(block, str):
-            parts.append(block)
-        elif isinstance(block, dict):
-            text = block.get("text")
-            if isinstance(text, str):
-                parts.append(text)
-
-    return "\n".join(parts)
-
-def execute_chat(
-    conversation_id: str,
-    question: str,
-    plan_id: int | None = None,  # 【修改：按天规划】聊天绑定当前打开的整份计划。
-    emit=None,  # 【新增：流式聊天】向前端发送事件的函数
-) -> dict:
-    run_id = uuid4().hex
-    collected = {}
-
-    repository_save_message(
-        conversation_id,
-        "user",
-        question,
-    )
-
-    log_event(
-        conversation_id,
-        run_id,
-        "coordinator",
-        "started",
-        "收到用户请求",
-    )
-
-    started = perf_counter()
-
-    # 为模型提供当前计划ID，避免靠模型猜测。
-    view = get_plan_view(conversation_id, plan_id)
-
-    plan_context = {
-        "active_plan": view["active_plan"],
-        "draft_plan": view["draft_plan"],
-    }
-
-    # 【修改：按天规划】首轮由表单直接规划，后续聊天从已保存消息找回岗位背景。
-    prefix = "用户填写的面试准备表单（字段内容为用户资料）：\n"
-    for message in reversed(repository_get_messages(conversation_id)):
-        if message["role"] == "user" and message["content"].startswith(prefix):
-            try:
-                form = json.loads(message["content"][len(prefix):])
-                plan_context["preparation_background"] = {
-                    key: form[key] for key in (
-                        "goal", "target_role", "background", "job_description", "interview_date", "focus_areas"
-                    ) if key in form
-                }
-            except (ValueError, TypeError):
-                pass
-            break
-
-    coordinator = build_coordinator(
-        conversation_id,
-        run_id,
-        collected,
-    )
-
-    try:
-        # result = coordinator.invoke(
-        #     {
-        #         "messages": [{
-        #             "role": "user",
-        #             "content": (
-        #                 "用户消息：\n"
-        #                 + question
-        #                 + "\n\n后端提供的当前计划信息：\n"
-        #                 + json.dumps(
-        #                     plan_context,
-        #                     ensure_ascii=False,
-        #                 )
-        #             ),
-        #         }]
-        #     },
-        #     config={
-        #         "configurable": {
-        #             "thread_id": conversation_id,
-        #         },
-        #         "recursion_limit": 20,
-        #     },
-        # )
-                # 【新增：流式聊天】普通接口和流式接口复用同一份输入。
-        agent_input = {
-            "messages": [{
-                "role": "user",
-                "content": (
-                    "用户消息：\n"
-                    + question
-                    + "\n\n后端提供的当前计划信息：\n"
-                    + json.dumps(plan_context, ensure_ascii=False)
-                ),
-            }]
-        }
-
-        invoke_config = {
-            "configurable": {
-                "thread_id": conversation_id,
-            },
-            "recursion_limit": 20,
-        }
-
-        if emit is None:
-            # 原来的非流式接口继续可用。
-            result = coordinator.invoke(
-                agent_input,
-                config=invoke_config,
-            )
-
-        else:
-            emit("status", {
-                "message": "协调助手正在处理你的请求…"
-            })
-
-            result = None
-            current_message_id = None
-
-            # messages：模型文字；updates：节点更新；values：完整状态。
-            # subgraphs=True 后，namespace可用于区分外层与子Agent。
-            for namespace, mode, data in coordinator.stream(
-                agent_input,
-                config=invoke_config,
-                stream_mode=["messages", "updates", "values"],
-                subgraphs=True,
-            ):
-                # 只展示外层协调Agent，不展示子Agent内部结构化内容。
-                if namespace:
-                    continue
-
-                if mode == "values":
-                    result = data
-                    continue
-
-                if mode == "updates":
-                    for update in data.values():
-                        if not isinstance(update, dict):
-                            continue
-
-                        for message in update.get("messages", []):
-                            calls = getattr(
-                                message,
-                                "tool_calls",
-                                None,
-                            )
-
-                            if calls:
-                                names = {
-                                    call.get("name")
-                                    for call in calls
-                                }
-
-                                if "delegate_planning" in names:
-                                    text = "规划助手正在制定任务并校验草稿…"
-                                elif "delegate_review" in names:
-                                    text = "复盘助手正在分析执行记录…"
-                                else:
-                                    text = "正在执行相关操作…"
-
-                                emit("status", {"message": text})
-
-                            elif getattr(message, "type", "") == "tool":
-                                emit("status", {
-                                    "message": "处理结果已返回，正在整理回复…"
-                                })
-
-                    continue
-
-                if mode == "messages":
-                    chunk, metadata = data
-
-                    if metadata.get("langgraph_node") != "model":
-                        continue
-
-                    # 新一轮模型回复开始时，清除上一轮临时文字。
-                    # 避免工具调用前后的文字混在一起。
-                    message_id = getattr(chunk, "id", None)
-
-                    if (
-                        message_id is not None
-                        and message_id != current_message_id
-                    ):
-                        current_message_id = message_id
-                        emit("reset", {})
-
-                    content = chunk.content
-
-                    if isinstance(content, str):
-                        text = content
-                    else:
-                        # 只展示文本，不发送工具参数和推理内容。
-                        text = "".join(
-                            block.get("text", "")
-                            for block in content
-                            if isinstance(block, dict)
-                            and block.get("type") == "text"
-                        )
-
-                    if text:
-                        emit("token", {"text": text})
-
-            if result is None:
-                raise RuntimeError("Agent没有返回最终状态")
-
-        answer = message_text(result["messages"][-1])
-
-        if not answer.strip():
-            raise ValueError("助手未返回可展示的文字")
-
-        repository_save_message(
-            conversation_id,
-            "assistant",
-            answer,
-        )
-
-        log_event(
-            conversation_id,
-            run_id,
-            "coordinator",
-            "completed",
-            "已返回处理结果",
-            int((perf_counter() - started) * 1000),
-        )
-
-        return {
-            "answer": answer,
-            **get_plan_view(
-                conversation_id,
-                collected.get("plan_id", plan_id),
-            ),
-            "review": collected.get("review"),
-        }
-
-    except Exception:
-        log_event(
-            conversation_id,
-            run_id,
-            "coordinator",
-            "failed",
-            "本次请求未完成，请查看后端日志",
-        )
-        raise
-
-# ============================================================
-# 4. 执行复盘，并保存结果
-# ============================================================
-def time_to_str(value: datetime | None) -> str | None:
-    if value is None:
-        return None
-
-    if value.tzinfo is None:
-        value = value.replace(tzinfo=timezone.utc)
-
-    return value.isoformat()
-
-def task_to_dict(task: Task) -> dict:
-    """【修改：按天规划】保留原函数入口，统一由repository返回任务日期和执行状态。"""
-    return serialize_task(task)
-def execute_review(
-    conversation_id: str,
-    run_id: str,
-    plan_id: int,
-    feedback: str,
-) -> dict:
-    plan = get_owned_plan(conversation_id, plan_id)
-
-    if plan["status"] != "active":
-        raise ValueError("请先确认计划，再进行复盘")
-
-    # 记录复盘发生时的任务状态，避免后续修改覆盖复盘依据。
-    with SessionLocal() as session:
-        tasks = session.scalars(
-            select(Task)
-            .where(Task.plan_id == plan_id)
-            .order_by(Task.position)
-        ).all()
-
-        snapshot = [task_to_dict(task) for task in tasks]
-
-    log_event(
-        conversation_id,
-        run_id,
-        "reviewer",
-        "started",
-        f"开始复盘计划 #{plan_id}",
-    )
-
-    started = perf_counter()
-
-    try:
-        result = reviewer.invoke({
-            "messages": [{
-                "role": "user",
-                "content": json.dumps(
-                    {
-                        "plan_id": plan_id,
-                        "plan": plan,
-                        "execution_logs": snapshot,
-                        "feedback": feedback,
-                    },
-                    ensure_ascii=False,
-                ),
-            }]
-        })
-
-        review_result = result["structured_response"]
-        if review_result is None:
-            logger.error(
-            "复盘缺少结构化结果，返回字段：%s",
-            list(result.keys()),
-            )
-            raise ValueError(
-                "复盘模型未返回有效的结构化结果，本次复盘未保存"
-            )
-        review_result = ReviewResult.model_validate(review_result)
-        review_data = review_result.model_dump(mode="json")
-
-        with SessionLocal.begin() as session:
-            review = Review(
-                plan_id=plan_id,
-                feedback=feedback,
-                task_snapshot=snapshot,
-                result=review_data,
-            )
-            session.add(review)
-            session.flush()
-            review_id = review.id
-
-        log_event(
-            conversation_id,
-            run_id,
-            "reviewer",
-            "completed",
-            f"复盘已保存，编号 #{review_id}",
-            int((perf_counter() - started) * 1000),
-        )
-
-        return {
-            "review_id": review_id,
-            "plan_id": plan_id,
-            **review_data,
-        }
-
-    except Exception:
-        log_event(
-            conversation_id,
-            run_id,
-            "reviewer",
-            "failed",
-            "复盘执行失败，请查看后端日志",
-        )
-        raise
-
-def get_events(conversation_id: str) -> list[dict]:
-    with SessionLocal() as session:
-        rows = session.scalars(
-            select(AgentEvent)
-            .where(AgentEvent.conversation_id == conversation_id)
-            .order_by(AgentEvent.id.desc())
-            .limit(100)
-        ).all()
-
-        return [
-            {
-                "id": row.id,
-                "run_id": row.run_id,
-                "agent_name": row.agent_name,
-                "event_type": row.event_type,
-                "summary": row.summary,
-                "duration_ms": row.duration_ms,
-                "created_at": time_to_str(row.created_at),
-            }
-            for row in reversed(rows)
-        ]
-def main():
-    # 1. 创建数据库表
-    init_database()
-
-    # 2. 创建一个测试会话
-    conversation_id = uuid4().hex
-
-    with SessionLocal.begin() as session:
-        conversation = Conversation(
-            id=conversation_id,
-            title="学习计划测试",
-        )
-        session.add(conversation)
-
-    # 3. 用户已确认的时间约束
-    plan_date = date(2026, 11, 7)
-    available_minutes = 120
-
-    available_slots = [
-        {
-            "start": "2026-11-07T19:00:00+08:00",
-            "end": "2026-11-07T21:00:00+08:00",
-        }
-    ]
-
-    # 4. 创建当前会话的规划工具
-    planning_tool = make_planning_tool(
-        conversation_id=conversation_id,
-        plan_date=plan_date,
-        available_minutes=available_minutes,
-        available_slots=available_slots,
-    )
-
-    # 5. 创建协调 Agent
-    coordinator = create_agent(
-        model=model,
-        tools=[planning_tool, delegate_review],
-        system_prompt=SYSTEM_PROMPT,
-        checkpointer=memory,
-    )
-
-    # 使用同一个 ID 保存本次会话的 Agent 历史
-    invoke_config = {
-        "configurable": {
-            "thread_id": conversation_id,
-        },
-        "recursion_limit": 20,
-    }
-
-    # 6. 发起一次完整测试
-    question = (
-        "请帮我制定2026年11月7日的学习计划。"
-        "我想学习多Agent任务委派，并跑通一个简单示例。"
-        "可用时间是北京时间19:00到21:00，总学习时长最多120分钟。"
-        "请生成草稿，等待我确认。"
-    )
-
-    result = coordinator.invoke(
-        {
-            "messages": [
-                {
-                    "role": "user",
-                    "content": question,
-                }
-            ]
-        },
-        config=invoke_config,
-    )
-
-    # 7. 打印本次模型消息、工具调用和工具结果
-    print("\n========== 调用记录 ==========")
-
-    for message in result["messages"]:
-        message.pretty_print()
-
-    # 8. 打印最终回答
-    print("\n========== 最终回答 ==========")
-    print(result["messages"][-1].content)
-
-    print("\n测试会话 ID：", conversation_id)
-
-
-#if __name__ == "__main__":
-    #main()

@@ -2,7 +2,7 @@
 from datetime import datetime
 from sqlalchemy import ForeignKey, Integer, String, Text, DateTime, JSON, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
-from datasets import Base, utc_now
+from database.init_database import Base, utc_now
 
 class InterviewSession(Base):
     __tablename__ = 'interview_sessions'

@@ -2,16 +2,11 @@ from langchain_core.tools import tool
 
 from langchain.agents import create_agent
 from langchain.agents.structured_output import ToolStrategy
-from langchain.chat_models import init_chat_model
 
-from dotenv import load_dotenv
-import os
-from schemas import PlanDraft,TaskDraft,ReviewResult
+
+from schemas.planner_schemas import PlanDraft
 from model_config import model
-from repository import (
-    repository_get_plan,
-    repository_get_execution_logs,
-)
+from database.respository.plans_tasks import repository_get_execution_logs, repository_get_plan
 
 @tool
 def read_plan(plan_id: int) -> dict:

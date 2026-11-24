@@ -2,13 +2,14 @@
 import json
 from uuid import uuid4
 from sqlalchemy import select
-from datasets import SessionLocal, Plan, utc_now
-from interview_models import InterviewSession, InterviewTurn, InterviewReport
-from repository import repository_get_plan, repository_get_messages
-from agents.interviewer import interviewer, evaluator
+from database.init_database import SessionLocal, utc_now
+from database.interview_database import InterviewSession, InterviewTurn, InterviewReport
+from database.plan_database import Plan
+from database.respository.messages import repository_get_messages
+from database.respository.plans_tasks import repository_get_plan
+from agents.interviewer_evaluator import interviewer, evaluator
 from agents.planner import planner_agent
-from agents.plan_service import validate_and_save_draft, normalize_days
-
+from database.respository.plans_tasks import validate_and_save_draft, normalize_days
 
 def owned_plan(s, cid, pid):
     plan = s.get(Plan, pid)
@@ -83,15 +84,29 @@ def advance(cid, sid):
                    'allow_follow_up':can_follow,'force_follow_up_only':number >= iv.question_count,
                    'next_main_number':number+1}
         position = len(turns)
-    decision = interviewer.invoke({'messages':[{'role':'user','content':json.dumps(payload,ensure_ascii=False)}]})['structured_response']
+        question_count = iv.question_count
+
+    decision = interviewer.invoke({
+        "messages": [{
+            "role": "user",
+            "content": json.dumps(payload, ensure_ascii=False),
+        }]
+    })["structured_response"]
     # 最后一题不强迫追问：模型选择不追问即结束；其他场景最多追问一次。
     follow = can_follow and decision.follow_up
-    if number >= iv.question_count and not follow:
+    if number >= question_count and not follow:
         return finish(cid, sid)
+
     with SessionLocal.begin() as s:
         owned_interview(s, cid, sid)
-        s.add(InterviewTurn(session_id=sid,position=position,question_number=number if follow else number+1,
-                            kind='follow_up' if follow else 'main',question=decision.question))
+        s.add(InterviewTurn(
+            session_id=sid,
+            position=position,
+            question_number=number if follow else number + 1,
+            kind="follow_up" if follow else "main",
+            question=decision.question,
+        ))
+
     return view(cid, sid)
 
 

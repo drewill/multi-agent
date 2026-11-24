@@ -1,34 +1,6 @@
 from datetime import date, datetime, timedelta
 from pydantic import BaseModel, Field, ConfigDict, field_validator, model_validator
 
-
-
-
-
-# 【修改：按天规划】 TaskDraft 必须先定义，PlanDraft 才能直接引用。
-class TaskDraft(BaseModel):
-    title: str = Field(min_length=1, max_length=255)
-    # 【修改：时长选填】模型指定第几天，不再预测任务耗时。
-    day_number: int = Field(ge=1, le=14, strict=True)
-    expected_output: str = Field(min_length=1)
-
-
-class PlanDraft(BaseModel):
-    goal: str
-    tasks: list[TaskDraft] = Field(min_length=1)
-    warnings: list[str] = Field(default_factory=list)
-
-
-class ReviewResult(BaseModel):
-    summary: str
-    observations: list[str]
-    adjustment_suggestions: list[str]
-    needs_replan: bool
-    missing_information: list[str] = Field(default_factory=list)
-
-
-
-
 class DayBudget(BaseModel):
     plan_date: date
     available_minutes: int | None = Field(default=None, gt=0, le=1440, strict=True)  # 【修改：时长选填】None表示用户未限制时长。
@@ -65,29 +37,3 @@ class PlanFormRequest(BaseModel):
         if self.interview_date and self.end_date>self.interview_date:raise ValueError('准备日期不能晚于面试日期')
         return self
 
-
-# 【新增：修改草稿】只允许更新任务标题和预期产出。
-class DraftTaskReplacement(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    task_id: int = Field(gt=0, strict=True)
-
-    title: str = Field(
-        min_length=1,
-        max_length=255,
-    )
-
-    expected_output: str = Field(
-        min_length=1,
-        max_length=4000,
-    )
-
-    @field_validator("title", "expected_output")
-    @classmethod
-    def reject_blank(cls, value: str) -> str:
-        value = value.strip()
-
-        if not value:
-            raise ValueError("任务名称和预期产出不能为空")
-
-        return value
